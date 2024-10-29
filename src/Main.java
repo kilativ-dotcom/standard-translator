@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 public class Main {
     private static final String FILE_POSTFIX = "";
     private static final String TRANSLATIONS_PATH = "translations" + File.separator;
+    private static final String OUTPUT_PATH = "output" + File.separator;
 
     private static final String HEADER_GROUP = "headerName";
     private static final String INDENT_GROUP = "indent";
@@ -29,7 +30,6 @@ public class Main {
         System.out.println("found " + texFiles.size() + " tex files");
         appendTranslations(readFiles(texFiles), translations, translated, translationNotFound);
         System.out.println("translated " + translated.size() + " headers");
-        System.out.println("couldn't translate " + translationNotFound.size() + " headers");
         for (Map.Entry<String, Set<String>> entry : translated.entrySet()) {
             if (entry.getValue().size() > 1) {
                 System.out.println("\nfound multiple headers `" + entry.getKey() + "` at files");
@@ -45,16 +45,35 @@ public class Main {
                     sb.append(String.format("\\scnheader{%s}%n\\scnidtf{%s}%n%n", russianHeader, translations.get(russianHeader)));
                 }
             }
-            File dictionary = new File(TRANSLATIONS_PATH + "dictionary.tex");
+            File dictionary = new File(OUTPUT_PATH + "dictionary.tex");
             writeToFile(dictionary.getAbsolutePath(), sb.toString().trim());
             System.out.println("not used translations have been written to " + dictionary.getAbsolutePath());
+        }
+        if (!translationNotFound.isEmpty())
+        {
+            System.out.println("couldn't translate " + translationNotFound.size() + " headers");
+            StringBuilder stringBuilder = new StringBuilder();
+            translationNotFound.forEach((header, files) -> {
+                if (header.contains(",")) {
+                    stringBuilder.append("\"").append(header.replaceAll("\"", "\"\"")).append("\"");
+                } else {
+                    stringBuilder.append(header);
+                }
+                for (String file : files) {
+                    stringBuilder.append(",").append(file);
+                }
+                stringBuilder.append("\n");
+            });
+            File notTranslatedHeadersFile = new File(OUTPUT_PATH + "not-translated-headers.csv");
+            writeToFile(notTranslatedHeadersFile.getAbsolutePath(), stringBuilder.toString());
+            System.out.println("headers that weren't translated were written to " + notTranslatedHeadersFile.getAbsolutePath());
         }
     }
 
     private static Map<String, String> readTranslations() {
         Map<String, String> translationPairs = new HashMap<>();
         List<File> translations = getFilesWithType(new String[]{TRANSLATIONS_PATH}, "csv");
-        System.out.println("Translation filess:");
+        System.out.println("Translation files:");
         translations.forEach(System.out::println);
         System.out.println("--------------------------------");
         translations.forEach(file ->{
@@ -64,16 +83,16 @@ public class Main {
                     line = line.replaceAll("’", "'");
                     String[] values = line.split(CSV_SEPARATION_REGEX);
                     if (values.length != 2) {
-                        System.err.println("File " + file + " has " + values.length + " entries at " + line);
+                        System.err.println("File " + file + " has " + values.length + "(should be 2) entries at " + line);
                     } else {
                         if (translationPairs.containsKey(values[0])) {
                             System.err.println("Multiple translations found for " + values[0]);
                         } else {
                             if (values[0].startsWith("\"") && values[0].endsWith("\"")) {
-                                values[0] = values[0].substring(1, values[0].length()-1);
+                                values[0] = values[0].substring(1, values[0].length()-1).replaceAll("\"\"", "\"");
                             }
                             if (values[1].startsWith("\"") && values[1].endsWith("\"")) {
-                                values[1] = values[1].substring(1, values[1].length()-1);
+                                values[1] = values[1].substring(1, values[1].length()-1).replaceAll("\"\"", "\"");
                             }
                             translationPairs.put(values[0], values[1]);
                         }
@@ -197,6 +216,9 @@ public class Main {
     }
 
     private static void writeToFile(String filename, String content) {
+        File file = new File(filename).getParentFile();
+        if (!file.exists())
+            file.mkdirs();
         try (PrintWriter out = new PrintWriter(filename)) {
             out.println(content);
         } catch (FileNotFoundException e) {

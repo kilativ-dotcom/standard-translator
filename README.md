@@ -11,7 +11,7 @@ To run you can use script
 
 In case same scnheader is met multiple times only first occurrence will be translated and program will warn about duplicates after all files are translated.
 
-Not used translations will be placed in `translations/dictionary.tex` in pairs like
+Not used translations will be placed in `output/dictionary.tex` in pairs like
 
 ```tex
 \scnheader{машина логического вывода с учетом фактора времени}
@@ -23,5 +23,7 @@ Not used translations will be placed in `translations/dictionary.tex` in pairs l
 \scnheader{scp-метапрограмма}
 \scnidtf{scp-metaprogram}
 ```
+
+Headers that weren't translated will be placed in `output/not-translated-headers.csv` in a format `header(,file1:line)+`
 
 ### **_If you want to run this program you will need Java8 installed_**
